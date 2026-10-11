@@ -1,0 +1,31 @@
+customer_id,customer_name,recent_message,sentiment_score,sentiment,matched_signals,positive_context,risk_score,risk_level,retention_action,analyzed_at
+C010,Customer 10,I may cancel if the service does not improve.,-0.5277,Negative,cancel,None,5,High,Immediate retention follow-up,2026-10-10 23:27:35
+C024,Customer 24,I am tired of these repeated problems and want to leave.,-0.6705,Negative,"repeated problems, want to leave",None,5,High,Immediate retention follow-up,2026-10-10 23:27:35
+C030,Customer 30,If this problem happens again I will cancel my account.,-0.5719,Negative,cancel,None,5,High,Immediate retention follow-up,2026-10-10 23:27:35
+C001,Customer 01,I want to cancel my subscription immediately.,-0.1779,Negative,cancel my subscription,None,4,High,Immediate retention follow-up,2026-10-10 23:27:35
+C018,Customer 18,Stop my service and remove my account.,-0.296,Negative,"remove my account, stop my service",None,4,High,Immediate retention follow-up,2026-10-10 23:27:35
+C020,Customer 20,I am not satisfied and may look for another provider.,-0.3252,Negative,"not satisfied, another provider",None,4,High,Immediate retention follow-up,2026-10-10 23:27:35
+C002,Customer 02,Your service is terrible and I am extremely unhappy.,-0.7346,Negative,"terrible, unhappy",None,3,High,Immediate retention follow-up,2026-10-10 23:27:35
+C004,Customer 04,The price is too expensive and I am thinking about switching providers.,0.0,Neutral,"too expensive, switching providers",None,3,High,Immediate retention follow-up,2026-10-10 23:27:35
+C005,Customer 05,Please close my account. I no longer need this service.,0.0258,Neutral,close my account,None,3,High,Immediate retention follow-up,2026-10-10 23:27:35
+C012,Customer 12,Please terminate my subscription at the end of this month.,0.3182,Positive,terminate,None,3,High,Immediate retention follow-up,2026-10-10 23:27:35
+C015,Customer 15,I am frustrated because the application keeps crashing.,-0.5267,Negative,"keeps crashing, frustrated",None,3,High,Immediate retention follow-up,2026-10-10 23:27:35
+C026,Customer 26,Please unsubscribe me. I do not want to continue.,0.2681,Positive,"do not want to continue, unsubscribe",None,3,High,Immediate retention follow-up,2026-10-10 23:27:35
+C007,Customer 07,I am disappointed with the service and want a refund.,-0.4215,Negative,"disappointed, refund",None,2,Medium,Contact customer and review concerns,2026-10-10 23:27:35
+C016,Customer 16,I am considering moving to another company.,0.0,Neutral,"moving to another, another company",None,2,Medium,Contact customer and review concerns,2026-10-10 23:27:35
+C022,Customer 22,I want my money back. This experience has been awful.,-0.4019,Negative,"money back, awful",None,2,Medium,Contact customer and review concerns,2026-10-10 23:27:35
+C028,Customer 28,I found a cheaper competitor and may switch next month.,0.0,Neutral,"competitor, switch",None,2,Medium,Contact customer and review concerns,2026-10-10 23:27:35
+C009,Customer 09,I have contacted support three times and nobody has fixed my problem.,0.0,Neutral,"contacted support, nobody has fixed",None,1,Medium,Contact customer and review concerns,2026-10-10 23:27:35
+C013,Customer 13,The monthly cost is too high for me.,0.0,Neutral,too high,None,1,Medium,Contact customer and review concerns,2026-10-10 23:27:35
+C019,Customer 19,The service is okay but I expected better performance.,0.6486,Positive,expected better,None,1,Medium,Contact customer and review concerns,2026-10-10 23:27:35
+C027,Customer 27,The application has been slow recently but it is still usable.,0.0,Neutral,slow recently,None,1,Medium,Contact customer and review concerns,2026-10-10 23:27:35
+C003,Customer 03,Everything is working perfectly. I am very happy with the service.,0.8479,Positive,None,"working perfectly, very happy",0,Low,No immediate retention action,2026-10-10 23:27:35
+C006,Customer 06,Your support team was very helpful and solved my problem quickly.,0.6659,Positive,None,"solved my problem, very helpful",0,Low,No immediate retention action,2026-10-10 23:27:35
+C008,Customer 08,The product works well and I have no complaints.,-0.4215,Negative,None,no complaints,0,Low,No immediate retention action,2026-10-10 23:27:35
+C011,Customer 11,I really like the service and plan to continue using it.,0.4201,Positive,None,None,0,Low,No immediate retention action,2026-10-10 23:27:35
+C014,Customer 14,The latest update is great. Thank you for improving the product.,0.8555,Positive,None,None,0,Low,No immediate retention action,2026-10-10 23:27:35
+C017,Customer 17,Customer support has been excellent.,0.7506,Positive,None,excellent,0,Low,No immediate retention action,2026-10-10 23:27:35
+C021,Customer 21,Everything is fine. No issues so far.,-0.1027,Negative,None,"everything is fine, no issues",0,Low,No immediate retention action,2026-10-10 23:27:35
+C023,Customer 23,Can you explain the new features in my plan?,0.0,Neutral,None,None,0,Low,No immediate retention action,2026-10-10 23:27:35
+C025,Customer 25,The service is useful and the pricing is reasonable.,0.4404,Positive,None,None,0,Low,No immediate retention action,2026-10-10 23:27:35
+C029,Customer 29,Thanks for resolving my issue. I am satisfied now.,0.8074,Positive,None,satisfied now,0,Low,No immediate retention action,2026-10-10 23:27:35
