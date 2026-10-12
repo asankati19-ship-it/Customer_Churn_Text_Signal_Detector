@@ -1,6 +1,8 @@
 # Customer Churn Text Signal Detector
 # Churn-risk keyword definitions
 
+import re
+
 import nltk
 import pandas as pd
 from nltk.sentiment import SentimentIntensityAnalyzer
@@ -94,6 +96,18 @@ sia = get_sentiment_analyzer()
 # KEYWORD MATCHING
 # =================================================
 
+def _is_negated(text, start):
+    """Recognize local negated intent, without suppressing other clauses."""
+    prefix = re.split(r"[.!?;,]|\b(?:but|however|yet|and)\b", text[:start])[-1]
+    # Keep scope narrow: 'not happy ... cancel' must still flag cancellation.
+    intent = r"(?:(?:want|wish|plan|intend|need)\s+to\s+|(?:going|planning)\s+to\s+)?"
+    destination = r"(?:(?:switch(?:ing|ed)?|mov(?:e|ing))\s+to\s+(?:(?:a|another|the)\s+)?)?"
+    return bool(re.search(
+        r"\b(?:not|never|no longer)\s+" + intent + destination + r"$",
+        prefix,
+    ))
+
+
 def find_keywords(message, keywords):
     """
     Find matching keywords or phrases in a customer message.
@@ -102,12 +116,25 @@ def find_keywords(message, keywords):
     'cancel' and 'cancel my subscription' are reduced.
     """
 
-    text = str(message).lower()
+    text = str(message).lower().replace("’", "'")
+    text = re.sub(r"\bwon't\b", "will not", text)
+    text = re.sub(r"\bcan't\b", "can not", text)
+    text = re.sub(r"n't\b", " not", text)
+    text = re.sub(r"\s+", " ", text)
 
     matches = [
         keyword
         for keyword in keywords
-        if keyword in text
+        if any(
+            not _is_negated(text, match.start())
+            for match in re.finditer(
+                r"\b" + (
+                    r"switch(?:ing|ed|es)?" if keyword == "switch"
+                    else re.escape(keyword)
+                ) + r"\b",
+                text,
+            )
+        )
     ]
 
     # Sort longest phrases first
