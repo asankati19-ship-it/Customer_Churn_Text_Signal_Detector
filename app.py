@@ -504,8 +504,12 @@ with bulk_tab:
                 # ANALYZE CUSTOMERS
                 # -------------------------------------
 
+                st.caption(
+                    "Analyzing this file also saves the results to CRM."
+                )
+
                 if st.button(
-                    "🚀 Analyze Customers",
+                    "🚀 Analyze and Save to CRM",
                     type="primary",
                     key="analyze_bulk",
                 ):
