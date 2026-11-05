@@ -1,10 +1,11 @@
 from pathlib import Path
+from uuid import uuid4
 
 import pandas as pd
 import streamlit as st
 
 from churn_analyzer import analyze_dataframe, analyze_message
-from dashboard_ui import apply_styles, show_risk_charts
+from dashboard_ui import apply_styles, show_risk_charts, show_records, show_header
 from database import (
     create_database,
     get_all_customers,
@@ -36,47 +37,20 @@ create_database()
 # SIDEBAR
 # =================================================
 
-st.sidebar.title("Churn Detector")
-
-st.sidebar.write(
-    """
-    Understand customer concerns and prioritize follow-up.
-
-    **1. Analyze Message**
-    Check one customer message.
-
-    **2. Upload CSV**
-    Review a batch of messages.
-
-    **3. Customer Dashboard**
-    Explore saved results and follow-up priorities.
-    """
-)
-
-st.sidebar.info(
-    "Risk levels: High | Medium | Low"
-)
-
-
-# =================================================
-# MAIN HEADER
-# =================================================
-
-st.title("Customer Churn Text Signal Detector")
-
-st.write(
-    "Identify dissatisfaction, cancellation, and switching "
-    "signals from customer messages and generate CRM "
-    "retention follow-up recommendations."
-)
-
-st.caption(
-    "English text rules flag retention priorities, not churn probabilities. "
-    "Low risk means no active signal was detected; review the message before acting."
-)
-
-st.divider()
-
+st.sidebar.markdown('<div class="brand-mark">↗</div>', unsafe_allow_html=True)
+st.sidebar.title("Churn Signal")
+st.sidebar.caption("CUSTOMER RETENTION WORKSPACE")
+st.sidebar.markdown('''<div class="side-section">YOUR WORKFLOW</div>
+<div class="side-step">01 · Listen<span>Analyze an individual message.</span></div>
+<div class="side-step">02 · Discover<span>Find patterns across a customer batch.</span></div>
+<div class="side-step">03 · Follow up<span>Prioritize your retention outreach.</span></div>''', unsafe_allow_html=True)
+st.sidebar.markdown("### How to read risk")
+st.sidebar.write("🔴 **High** · Prioritize follow-up")
+st.sidebar.write("🟠 **Medium** · Review concerns")
+st.sidebar.write("🟢 **Low** · No active signal detected")
+st.sidebar.divider()
+st.sidebar.caption("Demo workspace · Use fictional data. Saved records are shared and temporary.")
+show_header()
 
 # =================================================
 # TABS
@@ -97,7 +71,8 @@ single_tab, bulk_tab, dashboard_tab = st.tabs(
 
 with single_tab:
 
-    st.subheader("Analyze a Customer Message")
+    st.subheader("Start with a conversation")
+    st.caption("Paste a customer message to understand its tone, departure signals, and recommended next step.")
 
     col1, col2 = st.columns(2)
 
@@ -119,7 +94,7 @@ with single_tab:
             "Example: I am very unhappy with the service "
             "and I want to cancel my subscription."
         ),
-        height=150,
+        height=180,
     )
 
     if st.button(
@@ -137,6 +112,7 @@ with single_tab:
         else:
 
             result = analyze_message(message)
+            st.session_state.pop("generated_customer_id", None)
 
             st.session_state["single_result"] = result
             st.session_state["single_message"] = message
@@ -220,6 +196,8 @@ with single_tab:
         # DETECTED SIGNALS
         # ---------------------------------------------
 
+        st.caption("Sentiment measures tone; churn risk measures departure signals. A neutral or positive message can still indicate high risk.")
+
         st.subheader(
             "Detected Churn Signals"
         )
@@ -259,6 +237,7 @@ with single_tab:
         # SAVE CUSTOMER TO CRM
         # ---------------------------------------------
 
+        st.caption("Saving an existing Customer ID updates its record. Leave the ID blank to generate one.")
         if st.button(
             "Save Customer to CRM",
             key="save_single_customer",
@@ -268,7 +247,7 @@ with single_tab:
                 st.session_state[
                     "single_customer_id"
                 ].strip()
-            )
+            ) or st.session_state.setdefault("generated_customer_id", "CUST-" + uuid4().hex[:12].upper())
 
             saved_customer_name = (
                 st.session_state[
@@ -362,11 +341,11 @@ with single_tab:
 with bulk_tab:
 
     st.subheader(
-        "Bulk Customer Message Analysis"
+        "A clearer view of every conversation"
     )
 
     st.write(
-        "Upload a CSV containing customer messages."
+        "Upload your customer CSV to discover retention priorities across a whole batch."
     )
 
     st.write(
@@ -439,6 +418,7 @@ with bulk_tab:
     uploaded_file = st.file_uploader(
         "Choose customer CSV file",
         type=["csv"],
+        max_upload_size=5,
         key="bulk_upload",
     )
 
@@ -453,13 +433,16 @@ with bulk_tab:
         try:
 
             df = pd.read_csv(
-                uploaded_file, dtype={"customer_id": str}
+                uploaded_file, dtype=str, nrows=5001
             )
 
 
             # -----------------------------------------
             # CLEAN COLUMN NAMES
             # -----------------------------------------
+
+            if len(df) > 5000:
+                raise ValueError("Please upload at most 5,000 customers per file.")
 
             df.columns = [
                 str(column)
@@ -539,7 +522,7 @@ with bulk_tab:
                 # -------------------------------------
 
                 st.caption(
-                    "Analyzing this file also saves the results to CRM."
+                    "Analyzing this file also saves results to CRM. Existing customer IDs are updated."
                 )
 
                 if st.button(
@@ -736,7 +719,7 @@ with bulk_tab:
 with dashboard_tab:
 
     st.subheader(
-        "Customer Dashboard"
+        "Your retention overview"
     )
 
 
@@ -859,11 +842,7 @@ with dashboard_tab:
                 "All CRM Customer Records"
             )
 
-            st.dataframe(
-                crm_data,
-                width="stretch",
-                hide_index=True,
-            )
+            show_records(crm_data, "crm")
 
 
             # -----------------------------------------
@@ -902,6 +881,7 @@ with dashboard_tab:
 st.divider()
 
 st.caption(
-    "Customer Churn Text Signal Detector | "
-    "Python • pandas • NLTK/VADER • SQLite • Streamlit"
+    "Churn Signal · Signals support your judgment; they are not churn probabilities. Review each message before acting."
 )
+
+
