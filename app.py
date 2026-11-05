@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pandas as pd
 import streamlit as st
 
@@ -419,6 +421,15 @@ with bulk_tab:
         file_name="sample_customer_messages.csv",
         mime="text/csv",
     )
+
+    st.download_button(
+        label="Download 40 Test Customers CSV",
+        data=Path(__file__).with_name("test_customers_40.csv").read_bytes(),
+        file_name="test_customers_40.csv",
+        mime="text/csv",
+        key="download_test_customers",
+    )
+    st.caption("40 fictional customers covering cancellation, complaints, switching, and positive messages.")
 
 
     # -------------------------------------------------
