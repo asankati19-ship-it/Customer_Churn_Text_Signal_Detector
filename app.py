@@ -1,7 +1,7 @@
 import pandas as pd
 import streamlit as st
 
-from churn_analyzer import analyze_message
+from churn_analyzer import analyze_dataframe, analyze_message
 from database import (
     create_database,
     get_all_customers,
@@ -63,6 +63,11 @@ st.write(
     "retention follow-up recommendations."
 )
 
+st.caption(
+    "English text rules flag retention priorities, not churn probabilities. "
+    "Low risk means no active signal was detected; review the message before acting."
+)
+
 st.divider()
 
 
@@ -116,7 +121,7 @@ with single_tab:
         key="analyze_single",
     ):
 
-        if not message.strip():
+        if not message.strip() or not any(c.isalpha() for c in message):
 
             st.warning(
                 "Please enter a customer message."
@@ -135,6 +140,14 @@ with single_tab:
     # -------------------------------------------------
     # DISPLAY SINGLE CUSTOMER RESULT
     # -------------------------------------------------
+
+    if "single_result" in st.session_state and (
+        message != st.session_state["single_message"]
+        or customer_id != st.session_state["single_customer_id"]
+        or customer_name != st.session_state["single_customer_name"]
+    ):
+        del st.session_state["single_result"]
+        st.info("Inputs changed. Analyze the message again to refresh the result.")
 
     if "single_result" in st.session_state:
 
@@ -414,12 +427,17 @@ with bulk_tab:
     )
 
 
+    upload_content = uploaded_file.getvalue() if uploaded_file is not None else None
+    if st.session_state.get("bulk_source") != upload_content:
+        st.session_state.pop("bulk_report", None)
+        st.session_state["bulk_source"] = upload_content
+
     if uploaded_file is not None:
 
         try:
 
             df = pd.read_csv(
-                uploaded_file
+                uploaded_file, dtype={"customer_id": str}
             )
 
 
@@ -514,32 +532,7 @@ with bulk_tab:
                         "Analyzing customer messages..."
                     ):
 
-                        analysis_results = (
-                            df[
-                                "recent_message"
-                            ]
-                            .apply(
-                                analyze_message
-                            )
-                            .apply(
-                                pd.Series
-                            )
-                        )
-
-
-                        report = pd.concat(
-                            [
-                                df.reset_index(
-                                    drop=True
-                                ),
-                                analysis_results
-                                .reset_index(
-                                    drop=True
-                                ),
-                            ],
-                            axis=1,
-                        )
-
+                        report = analyze_dataframe(df)
 
                         # ---------------------------------
                         # SAVE TO SQLITE CRM

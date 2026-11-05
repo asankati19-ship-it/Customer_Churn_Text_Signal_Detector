@@ -1,7 +1,10 @@
 # Customer Churn Text Signal Detector
 # Churn-risk keyword definitions
 
+import re
+
 import nltk
+from signal_rules import clauses, departure_signals, matches, normalize
 import pandas as pd
 from nltk.sentiment import SentimentIntensityAnalyzer
 
@@ -102,28 +105,7 @@ def find_keywords(message, keywords):
     'cancel' and 'cancel my subscription' are reduced.
     """
 
-    text = str(message).lower()
-
-    matches = [
-        keyword
-        for keyword in keywords
-        if keyword in text
-    ]
-
-    # Sort longest phrases first
-    matches.sort(key=len, reverse=True)
-
-    filtered_matches = []
-
-    for keyword in matches:
-
-        if not any(
-            keyword in existing
-            for existing in filtered_matches
-        ):
-            filtered_matches.append(keyword)
-
-    return filtered_matches
+    return matches(normalize(str(message)), keywords)
 
 
 # =================================================
@@ -161,106 +143,55 @@ def analyze_message(message):
     - retention action
     """
 
-    if pd.isna(message):
-        message = ""
+    if not isinstance(message, str) or not message.strip():
+        raise ValueError("Customer message must be non-empty text.")
+    if not any(character.isalpha() for character in message):
+        raise ValueError("Customer message must contain words.")
 
-    message = str(message)
+    compound_score = sia.polarity_scores(message)["compound"]
+    sentiment_label = get_sentiment_label(compound_score)
+    cancellation_matches = []
+    dissatisfaction_matches = []
+    switching_matches = []
+    positive_context_matches = []
+    negative_contribution = 0
+    committed_switch = False
+    for clause in clauses(message):
+        cancellation, switching = departure_signals(clause)
+        # Support contact alone does not establish dissatisfaction.
+        dissatisfaction = matches(clause, [
+            word for word in DISSATISFACTION_KEYWORDS
+            if word != "contacted support"
+        ] + ["not working", "does not work", "poor service", "unreliable",
+             "overcharged", "unresolved", "broken"])
+        positive = matches(clause, POSITIVE_CONTEXT_PHRASES)
+        # Historical complaints followed by an explicit resolution are no longer active.
+        resolved = bool(re.search(
+            r"\b(?:resolved|solved|fixed)\b", clause
+        )) and not bool(re.search(r"\b(?:not|never|unresolved|nobody|no one)\b", clause))
+        if resolved:
+            dissatisfaction = []
+        cancellation_matches.extend(cancellation)
+        switching_matches.extend(switching)
+        dissatisfaction_matches.extend(dissatisfaction)
+        positive_context_matches.extend(positive)
+        if switching and re.search(r"\b(?:i am|we are|i will|we will|have decided to) (?:switch|mov|leav)", clause):
+            committed_switch = True
+        # Sentiment strengthens an active complaint; it cannot invent churn intent.
+        if dissatisfaction:
+            score = sia.polarity_scores(clause)["compound"]
+            negative_contribution = max(negative_contribution, 2 if score <= -0.5 else 1 if score <= -0.05 else 0)
 
-    # ---------------------------------------------
-    # SENTIMENT ANALYSIS
-    # ---------------------------------------------
-
-    sentiment_scores = sia.polarity_scores(message)
-
-    compound_score = sentiment_scores["compound"]
-
-    sentiment_label = get_sentiment_label(
-        compound_score
+    cancellation_matches = list(dict.fromkeys(cancellation_matches))
+    switching_matches = list(dict.fromkeys(switching_matches))
+    dissatisfaction_matches = list(dict.fromkeys(dissatisfaction_matches))
+    positive_context_matches = list(dict.fromkeys(positive_context_matches))
+    risk_score = (
+        (3 if cancellation_matches else 0)
+        + (3 if committed_switch else 2 if switching_matches else 0)
+        + (1 if dissatisfaction_matches else 0)
+        + negative_contribution
     )
-
-
-    # ---------------------------------------------
-    # KEYWORD DETECTION
-    # ---------------------------------------------
-
-    cancellation_matches = find_keywords(
-        message,
-        CANCELLATION_KEYWORDS,
-    )
-
-    dissatisfaction_matches = find_keywords(
-        message,
-        DISSATISFACTION_KEYWORDS,
-    )
-
-    switching_matches = find_keywords(
-        message,
-        SWITCHING_KEYWORDS,
-    )
-
-    positive_context_matches = find_keywords(
-        message,
-        POSITIVE_CONTEXT_PHRASES,
-    )
-
-
-    # ---------------------------------------------
-    # RISK SCORE
-    # ---------------------------------------------
-
-    risk_score = 0
-
-
-    # Explicit cancellation is strongest signal
-    if cancellation_matches:
-        risk_score += 3
-
-
-    # Switching / competitor language
-    if switching_matches:
-        risk_score += 2
-
-
-    # Dissatisfaction signal
-    if dissatisfaction_matches:
-        risk_score += 1
-
-
-    # Check whether churn signals exist
-    has_churn_signal = bool(
-        cancellation_matches
-        or dissatisfaction_matches
-        or switching_matches
-    )
-
-
-    # Check positive context
-    positive_context = bool(
-        positive_context_matches
-    )
-
-
-    # ---------------------------------------------
-    # SENTIMENT CONTRIBUTION
-    # ---------------------------------------------
-
-    # Prevent false risk from sentences such as:
-    # "Everything is fine. No issues so far."
-    #
-    # However, if an explicit churn keyword exists,
-    # sentiment can still contribute to the score.
-
-    if not (
-        positive_context
-        and not has_churn_signal
-    ):
-
-        if compound_score <= -0.5:
-            risk_score += 2
-
-        elif compound_score < -0.05:
-            risk_score += 1
-
 
     # ---------------------------------------------
     # FINAL RISK LEVEL
@@ -346,6 +277,27 @@ def analyze_message(message):
 # PROCESS COMPLETE CUSTOMER DATASET
 # =================================================
 
+def analyze_dataframe(df):
+    """Validate the whole batch before analysis; replace any stale result columns."""
+    df = df.copy()
+    df.columns = [str(column).strip().lower() for column in df.columns]
+    if df.columns.duplicated().any():
+        raise ValueError("CSV column names must be unique.")
+    if "recent_message" not in df.columns:
+        raise ValueError("Input file must contain a 'recent_message' column.")
+    if df.empty:
+        raise ValueError("Input file must contain at least one customer message.")
+    results = []
+    for position, message in enumerate(df["recent_message"], start=2):
+        try:
+            results.append(analyze_message(message))
+        except ValueError as error:
+            raise ValueError(f"CSV row {position}: {error}") from error
+    analysis = pd.DataFrame(results)
+    df = df.drop(columns=[column for column in analysis.columns if column in df])
+    return pd.concat([df.reset_index(drop=True), analysis], axis=1)
+
+
 def process_customer_dataset(
     input_file="customer_messages.csv",
     output_file="churn_report.csv",
@@ -356,34 +308,8 @@ def process_customer_dataset(
     and save the final CRM churn report.
     """
 
-    df = pd.read_csv(input_file)
-
-
-    # Validate required column
-    if "recent_message" not in df.columns:
-
-        raise ValueError(
-            "Input file must contain a 'recent_message' column."
-        )
-
-
-    # Analyze every customer message
-    results = (
-        df["recent_message"]
-        .apply(analyze_message)
-        .apply(pd.Series)
-    )
-
-
-    # Combine original data with NLP results
-    report = pd.concat(
-        [
-            df.reset_index(drop=True),
-            results.reset_index(drop=True),
-        ],
-        axis=1,
-    )
-
+    df = pd.read_csv(input_file, dtype={"customer_id": str})
+    report = analyze_dataframe(df)
 
     # Save final CRM report
     report.to_csv(
