@@ -25,11 +25,15 @@ def clauses(text):
 
 
 def is_negated(text, start):
-    # Limit scope to the current clause and the preceding six words.
-    prefix = " ".join(text[:start].split()[-6:])
-    prefix = re.split(r"\band\b", prefix)[-1]
+    # Negation must modify this intent, not an unrelated earlier complaint.
+    prefix = re.split(r"[.!?;,]|\b(?:but|however|yet|and)\b", text[:start])[-1]
     prefix = re.sub(r"\bnot only\b", "", prefix)
-    return bool(re.search(r"\b(?:not|never|no longer|no|without)\b", prefix))
+    intent = r"(?:(?:want|wish|plan|intend|need)\s+to\s+|(?:going|planning)\s+to\s+)?"
+    destination = r"(?:(?:switch(?:ing|ed)?|mov(?:e|ing))\s+to\s+(?:(?:a|another|the)\s+)?)?"
+    return bool(re.search(
+        r"\b(?:not|never|no longer|no|without)\s+" + intent + destination + r"$",
+        prefix,
+    ))
 
 
 def matches(text, keywords):

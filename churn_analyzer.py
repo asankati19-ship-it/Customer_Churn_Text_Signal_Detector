@@ -163,7 +163,7 @@ def analyze_message(message):
             word for word in DISSATISFACTION_KEYWORDS
             if word != "contacted support"
         ] + ["not working", "does not work", "poor service", "unreliable",
-             "overcharged", "unresolved", "broken"])
+             "overcharged", "unresolved", "broken", "miserable"])
         positive = matches(clause, POSITIVE_CONTEXT_PHRASES)
         # Historical complaints followed by an explicit resolution are no longer active.
         resolved = bool(re.search(
