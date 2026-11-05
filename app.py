@@ -2,11 +2,11 @@ import pandas as pd
 import streamlit as st
 
 from churn_analyzer import analyze_dataframe, analyze_message
+from dashboard_ui import apply_styles, show_risk_charts
 from database import (
     create_database,
     get_all_customers,
     get_high_risk_customers,
-    get_risk_summary,
     save_report_to_database,
 )
 
@@ -26,6 +26,7 @@ st.set_page_config(
 # INITIALIZE SQLITE DATABASE
 # =================================================
 
+apply_styles()
 create_database()
 
 
@@ -33,21 +34,25 @@ create_database()
 # SIDEBAR
 # =================================================
 
-st.sidebar.title("📉 Churn Detector")
+st.sidebar.title("Churn Detector")
 
 st.sidebar.write(
     """
-    This CRM tool analyzes recent customer messages using:
+    Understand customer concerns and prioritize follow-up.
 
-    • VADER sentiment analysis  
-    • Churn keyword rules  
-    • Risk scoring  
-    • Retention recommendations
+    **1. Analyze Message**
+    Check one customer message.
+
+    **2. Upload CSV**
+    Review a batch of messages.
+
+    **3. Customer Dashboard**
+    Explore saved results and follow-up priorities.
     """
 )
 
 st.sidebar.info(
-    "Risk levels: 🔴 High | 🟠 Medium | 🟢 Low"
+    "Risk levels: High | Medium | Low"
 )
 
 
@@ -55,7 +60,7 @@ st.sidebar.info(
 # MAIN HEADER
 # =================================================
 
-st.title("📉 Customer Churn Text Signal Detector")
+st.title("Customer Churn Text Signal Detector")
 
 st.write(
     "Identify dissatisfaction, cancellation, and switching "
@@ -77,9 +82,9 @@ st.divider()
 
 single_tab, bulk_tab, dashboard_tab = st.tabs(
     [
-        "👤 Single Customer Analysis",
-        "📁 Bulk CRM Analysis",
-        "📊 Retention Dashboard",
+        "Analyze Message",
+        "Upload CSV",
+        "Customer Dashboard",
     ]
 )
 
@@ -116,7 +121,7 @@ with single_tab:
     )
 
     if st.button(
-        "🔍 Analyze Message",
+        "Analyze Message",
         type="primary",
         key="analyze_single",
     ):
@@ -165,19 +170,19 @@ with single_tab:
         if risk_level == "High":
 
             st.error(
-                "🔴 HIGH CHURN RISK"
+                "High risk — prioritize retention follow-up"
             )
 
         elif risk_level == "Medium":
 
             st.warning(
-                "🟠 MEDIUM CHURN RISK"
+                "Medium risk — review the customer’s concerns"
             )
 
         else:
 
             st.success(
-                "🟢 LOW CHURN RISK"
+                "Low risk — no active churn signal detected"
             )
 
 
@@ -253,7 +258,7 @@ with single_tab:
         # ---------------------------------------------
 
         if st.button(
-            "💾 Save Customer to CRM",
+            "Save Customer to CRM",
             key="save_single_customer",
         ):
 
@@ -409,7 +414,7 @@ with bulk_tab:
     )
 
     st.download_button(
-        label="⬇️ Download Sample CSV",
+        label="Download Sample CSV",
         data=sample_csv,
         file_name="sample_customer_messages.csv",
         mime="text/csv",
@@ -527,7 +532,7 @@ with bulk_tab:
                 )
 
                 if st.button(
-                    "🚀 Analyze and Save to CRM",
+                    "Analyze and Save to CRM",
                     type="primary",
                     key="analyze_bulk",
                 ):
@@ -577,7 +582,7 @@ with bulk_tab:
         st.divider()
 
         st.subheader(
-            "📊 Churn Risk Summary"
+            "Churn Risk Summary"
         )
 
 
@@ -618,21 +623,21 @@ with bulk_tab:
         with col2:
 
             st.metric(
-                "🔴 High Risk",
+                "High Risk",
                 high_count,
             )
 
         with col3:
 
             st.metric(
-                "🟠 Medium Risk",
+                "Medium Risk",
                 medium_count,
             )
 
         with col4:
 
             st.metric(
-                "🟢 Low Risk",
+                "Low Risk",
                 low_count,
             )
 
@@ -641,31 +646,7 @@ with bulk_tab:
         # CHART
         # ---------------------------------------------
 
-        st.subheader(
-            "Churn Risk Distribution"
-        )
-
-        chart_data = pd.DataFrame(
-            {
-                "Risk Level": [
-                    "High",
-                    "Medium",
-                    "Low",
-                ],
-                "Customers": [
-                    high_count,
-                    medium_count,
-                    low_count,
-                ],
-            }
-        ).set_index(
-            "Risk Level"
-        )
-
-        st.bar_chart(
-            chart_data
-        )
-
+        show_risk_charts(report, "Current upload")
 
         # ---------------------------------------------
         # RESULTS TABLE
@@ -686,7 +667,7 @@ with bulk_tab:
         # ---------------------------------------------
 
         st.subheader(
-            "🚨 High-Risk Customers"
+            "High-Risk Customers"
         )
 
         bulk_high_risk = report[
@@ -730,7 +711,7 @@ with bulk_tab:
         )
 
         st.download_button(
-            label="⬇️ Download Churn Report",
+            label="Download Churn Report",
             data=output_csv,
             file_name="churn_report.csv",
             mime="text/csv",
@@ -744,7 +725,7 @@ with bulk_tab:
 with dashboard_tab:
 
     st.subheader(
-        "📊 CRM Retention Dashboard"
+        "Customer Dashboard"
     )
 
 
@@ -803,21 +784,21 @@ with dashboard_tab:
             with col2:
 
                 st.metric(
-                    "🔴 High Risk",
+                    "High Risk",
                     high_count,
                 )
 
             with col3:
 
                 st.metric(
-                    "🟠 Medium Risk",
+                    "Medium Risk",
                     medium_count,
                 )
 
             with col4:
 
                 st.metric(
-                    "🟢 Low Risk",
+                    "Low Risk",
                     low_count,
                 )
 
@@ -829,32 +810,14 @@ with dashboard_tab:
             # CRM RISK DISTRIBUTION
             # -----------------------------------------
 
-            st.subheader(
-                "CRM Risk Distribution"
-            )
-
-            db_summary = get_risk_summary()
-
-            if not db_summary.empty:
-
-                summary_chart = (
-                    db_summary
-                    .set_index(
-                        "risk_level"
-                    )
-                )
-
-                st.bar_chart(
-                    summary_chart
-                )
-
+            show_risk_charts(crm_data, "Saved CRM records")
 
             # -----------------------------------------
             # PRIORITY RETENTION QUEUE
             # -----------------------------------------
 
             st.subheader(
-                "🚨 Priority Retention Queue"
+                "Priority Retention Queue"
             )
 
             high_risk_customers = (
@@ -904,7 +867,7 @@ with dashboard_tab:
 
             st.download_button(
                 label=(
-                    "⬇️ Download CRM Retention Report"
+                    "Download CRM Retention Report"
                 ),
                 data=crm_csv,
                 file_name=(
